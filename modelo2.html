@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visor 3D</title>
+  <style>
+    body { margin: 0; padding: 0; overflow: hidden; background-color: #1a1a24; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/MTLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <script>
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a24);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.5));
+    const light1 = new THREE.DirectionalLight(0xffffff, 1.5);
+    light1.position.set(5, 10, 7);
+    scene.add(light1);
+    const light2 = new THREE.DirectionalLight(0xffffff, 0.8);
+    light2.position.set(-5, -5, -5);
+    scene.add(light2);
+
+    const mtlLoader = new THREE.MTLLoader();
+    mtlLoader.setResourcePath('./');
+    mtlLoader.load('material.mtl', function (materials) {
+      materials.preload();
+      
+      const objLoader = new THREE.OBJLoader();
+      objLoader.setMaterials(materials);
+      objLoader.load('7d8e71a3063b6daba62dbda93180b911.obj', function (object) {
+        
+        const box = new THREE.Box3().setFromObject(object);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+
+        object.position.x += (object.position.x - center.x);
+        object.position.y += (object.position.y - center.y);
+        object.position.z += (object.position.z - center.z);
+
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov = camera.fov * (Math.PI / 180);
+        let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 2.2;
+
+        camera.position.set(0, 0, cameraZ > 0 ? cameraZ : 5);
+        camera.lookAt(0, 0, 0);
+        controls.target.set(0, 0, 0);
+        controls.update();
+
+        scene.add(object);
+      }, undefined, function (err) {
+        console.error("Error al cargar OBJ:", err);
+      });
+    }, undefined, function (err) {
+      console.error("Error al cargar MTL:", err);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
